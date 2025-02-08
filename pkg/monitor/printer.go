@@ -5,9 +5,21 @@ import (
 	"math"
 	"strings"
 
-	"github.com/fatih/color"
 	psnet "github.com/shirou/gopsutil/v3/net"
 )
+
+// New helper type and functions to print colors manually.
+type myColor struct {
+	r, g, b int
+}
+
+func RGB(r, g, b int) myColor {
+	return myColor{r, g, b}
+}
+
+func (c myColor) Sprint(s string) string {
+	return fmt.Sprintf("\033[38;2;%d;%d;%dm%s\033[0m", c.r, c.g, c.b, s)
+}
 
 // ifaceStat holds per-interface bandwidth statistics.
 type ifaceStat struct {
@@ -82,14 +94,14 @@ func printTotalBandwidth(inTotal, outTotal float64) {
 	emptyIn := maxBars - inBars
 	emptyOut := maxBars - outBars
 
-	// Define bar color sequences: green, yellow, orange (HiMagenta), red.
-	barColors := []*color.Color{
-		color.New(color.FgGreen),
-		color.New(color.FgYellow),
-		color.New(color.FgHiMagenta), // used as orange
-		color.New(color.FgRed),
+	// Define bar colors using our RGB helper: green, yellow, orange, red.
+	barColors := []myColor{
+		RGB(0, 255, 0),   // green
+		RGB(255, 255, 0), // yellow
+		RGB(255, 165, 0), // orange
+		RGB(255, 0, 0),   // red
 	}
-	gray := color.New(color.FgHiBlack)
+	gray := RGB(128, 128, 128)
 
 	// Choose text color based on last filled bar (if any)
 	inTextColor := gray
@@ -101,21 +113,32 @@ func printTotalBandwidth(inTotal, outTotal float64) {
 		outTextColor = barColors[outBars-1]
 	}
 
-	// Print incoming bandwidth row with colored text and bars.
-	fmt.Print("↓")
-	inTextColor.Printf("%s ", inDisplay)
-	for i := 0; i < inBars; i++ {
-		barColors[i].Printf("▮")
-	}
-	gray.Print(strings.Repeat("▯", emptyIn))
-	fmt.Print("\\n")
+	// Capture output on a strings.Builder instead of printing directly.
+	var sb strings.Builder
 
-	// Print outgoing bandwidth row with colored text and bars.
-	fmt.Print("↑")
-	outTextColor.Printf("%s ", outDisplay)
-	for i := 0; i < outBars; i++ {
-		barColors[i].Printf("▮")
+	// Build incoming bandwidth row.
+	sb.WriteString(inTextColor.Sprint(inDisplay) + " ")
+	sb.WriteString("▼ ")
+	for i := 0; i < inBars; i++ {
+		sb.WriteString(barColors[i].Sprint("▮"))
 	}
-	gray.Print(strings.Repeat("▯", emptyOut))
-	fmt.Print(" | ansi=true font='Menlo' size=7\n")
+	sb.WriteString(gray.Sprint(strings.Repeat("▯", emptyIn)))
+	sb.WriteString("\\t")
+
+	// Build outgoing bandwidth row.
+	sb.WriteString(outTextColor.Sprint(outDisplay) + " ")
+	sb.WriteString("▲ ")
+	for i := 0; i < outBars; i++ {
+		sb.WriteString(barColors[i].Sprint("▮"))
+	}
+	sb.WriteString(gray.Sprint(strings.Repeat("▯", emptyOut)))
+	// Print the captured string with quoted formatting.
+	esc := literalEscape(sb.String())
+	esc = strings.Trim(esc, "\"")
+	fmt.Printf("%s | font='RobotoMono-Bold' size=12\n", esc)
+}
+
+func literalEscape(s string) string {
+	// Replace every actual ESC character with the literal text "\x1b"
+	return strings.ReplaceAll(s, "\x1b", `\x1b`)
 }
