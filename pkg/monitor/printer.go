@@ -123,7 +123,7 @@ func printTotalBandwidth(inTotal, outTotal float64) {
 		sb.WriteString(barColors[i].Sprint("▮"))
 	}
 	sb.WriteString(gray.Sprint(strings.Repeat("▯", emptyIn)))
-	sb.WriteString("\\t")
+	sb.WriteString("\\n")
 
 	// Build outgoing bandwidth row.
 	sb.WriteString(outTextColor.Sprint(outDisplay) + " ")
@@ -135,7 +135,7 @@ func printTotalBandwidth(inTotal, outTotal float64) {
 	// Print the captured string with quoted formatting.
 	esc := literalEscape(sb.String())
 	esc = strings.Trim(esc, "\"")
-	fmt.Printf("%s | font='RobotoMono-Bold' size=12\n", esc)
+	fmt.Printf("%s | size=8\n", esc)
 }
 
 func literalEscape(s string) string {
